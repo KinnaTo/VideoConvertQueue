@@ -1,0 +1,52 @@
+import type { Hono } from 'hono';
+import { getControllerMetadata } from '../decorators/controller';
+import { ROUTE_METADATA } from '../decorators/http';
+
+/**
+ * 规范化路径，确保：
+ * 1. 以/开头
+ * 2. 不以/结尾（除非是根路径）
+ * 3. 不会有重复的/
+ */
+function normalizePath(inputPath: string): string {
+    // 确保以/开头
+    const withLeadingSlash = inputPath.startsWith('/') ? inputPath : `/${inputPath}`;
+
+    // 移除结尾的/（除非是根路径）
+    const withoutTrailingSlash = withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+
+    // 替换多个连续的/为单个/
+    return withoutTrailingSlash.replace(/\/+/g, '/');
+}
+
+/**
+ * 注册控制器的路由
+ */
+// biome-ignore lint/suspicious/noExplicitAny: 运行时才能确定
+export function registerRoutes(app: Hono, controller: any) {
+    const routes = Reflect.getMetadata(ROUTE_METADATA, controller) || [];
+    const instance = new controller();
+    const prefix = getControllerMetadata(controller);
+
+    console.log('Registering routes for controller:', controller.name);
+    console.log('Controller prefix:', prefix);
+    console.log('Found routes:', routes);
+
+    for (const route of routes) {
+        const { path, method, handlerName, middlewares } = route;
+        const handler = instance[handlerName].bind(instance);
+        const methodName = method.toLowerCase() as keyof Hono;
+        // 规范化路径
+        const fullPath = normalizePath(`${prefix}${path}`);
+
+        console.log('Registering route:', { method, fullPath, handlerName });
+
+        if (middlewares && middlewares.length > 0) {
+            (app[methodName] as Function)(fullPath, ...middlewares, handler);
+        } else {
+            (app[methodName] as Function)(fullPath, handler);
+        }
+    }
+
+    return app;
+}
