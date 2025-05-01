@@ -7,6 +7,7 @@ dist
 build
 *.tgz
 generated
+migrations
 
 # code coverage
 coverage
