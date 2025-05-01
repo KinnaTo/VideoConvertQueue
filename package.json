@@ -6,14 +6,21 @@
     "scripts": {
         "lint": "biome check --write .",
         "commit": "czg",
-        "dev": "bun run src/index.ts"
+        "dev": "bun run src/index.ts",
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:studio": "prisma studio"
     },
     "devDependencies": {
         "@biomejs/biome": "1.9.4",
         "@types/bun": "latest",
-        "czg": "^1.11.1"
+        "czg": "^1.11.1",
+        "prisma": "^6.7.0"
     },
     "peerDependencies": {
         "typescript": "^5"
+    },
+    "dependencies": {
+        "picocolors": "^1.1.1"
     }
 }
