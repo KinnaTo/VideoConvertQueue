@@ -7,6 +7,7 @@
         "lint": "biome check --write .",
         "commit": "czg",
         "dev": "bun run src/index.ts",
+        "dev:bot": "DEBUG=grammy* bun run src/bot.ts",
         "db:generate": "prisma generate",
         "db:migrate": "prisma migrate dev",
         "db:studio": "prisma studio"

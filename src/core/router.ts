@@ -28,18 +28,12 @@ export function registerRoutes(app: Hono, controller: any) {
     const instance = new controller();
     const prefix = getControllerMetadata(controller);
 
-    console.log('Registering routes for controller:', controller.name);
-    console.log('Controller prefix:', prefix);
-    console.log('Found routes:', routes);
-
     for (const route of routes) {
         const { path, method, handlerName, middlewares } = route;
         const handler = instance[handlerName].bind(instance);
         const methodName = method.toLowerCase() as keyof Hono;
         // 规范化路径
         const fullPath = normalizePath(`${prefix}${path}`);
-
-        console.log('Registering route:', { method, fullPath, handlerName });
 
         if (middlewares && middlewares.length > 0) {
             (app[methodName] as Function)(fullPath, ...middlewares, handler);
