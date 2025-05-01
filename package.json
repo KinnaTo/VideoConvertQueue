@@ -1,0 +1,19 @@
+{
+    "name": "luckybe",
+    "module": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "lint": "biome check --write .",
+        "commit": "czg",
+        "dev": "bun run src/index.ts"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.9.4",
+        "@types/bun": "latest",
+        "czg": "^1.11.1"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    }
+}
