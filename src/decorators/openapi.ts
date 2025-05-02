@@ -1,8 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: reason
 import 'reflect-metadata';
-import { TYPE_METADATA } from './types';
-import { ROUTE_METADATA } from './http';
 import { getControllerMetadata } from './controller';
+import { ROUTE_METADATA } from './http';
+import { TYPE_METADATA } from './types';
 
 const OPENAPI_TAGS_KEY = 'openapi:tags';
 const OPENAPI_OPERATION_KEY = 'openapi:operation';
