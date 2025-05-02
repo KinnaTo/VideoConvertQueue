@@ -14,6 +14,44 @@ datasource db {
     url      = "file:./dev.db"
 }
 
-model User {
-    id String @id @default(cuid())
+enum TaskStatus {
+    WAITING
+    RUNNING
+    FINISHED
+    FAILED
+}
+
+model Token {
+    id    String @id @default(cuid())
+    token String @unique @default(uuid())
+
+    maxPriority Int @default(10)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([token])
+}
+
+model Queue {
+    id   String @id @default(cuid())
+    name String
+
+    defaultPriority Int    @default(0)
+    tasks           Task[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Task {
+    id       String     @id @default(cuid())
+    name     String
+    status   TaskStatus @default(WAITING)
+    priority Int        @default(0)
+    queue    Queue      @relation(fields: [queueId], references: [id])
+    queueId  String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
