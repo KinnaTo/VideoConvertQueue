@@ -1,10 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 import dayjs from 'dayjs';
 import type { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import logger from '../utils/logger';
 import { HTTPException } from 'hono/http-exception';
-import type { StatusCode } from 'hono/utils/http-status';
+import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
+import logger from '../utils/logger';
 
 /**
  * 标准响应格式
@@ -29,13 +28,19 @@ export class ResponseUtil {
      * @param message 成功消息
      * @returns Response对象
      */
-    static success<T>(c: Context, data?: T, message = 'Success'): Response {
+    static success<T>(c: Context, data?: T, message?: string): Response {
         const response: StandardResponse<T> = {
             status: 'success',
-            message,
-            data,
             timestamp: dayjs().toISOString(),
         };
+
+        if (data !== undefined) {
+            response.data = data;
+        }
+
+        if (message) {
+            response.message = message;
+        }
 
         return c.json(response);
     }
@@ -77,7 +82,7 @@ export class ResponseUtil {
             } else {
                 logger.error('Unknown error');
             }
-        } catch (error) {
+        } catch (_error) {
             logger.error('Error in logError');
         }
     }

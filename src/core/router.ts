@@ -1,6 +1,7 @@
 import type { Hono } from 'hono';
 import { getControllerMetadata } from '../decorators/controller';
 import { ROUTE_METADATA } from '../decorators/http';
+import { controllerRegistry } from './controller-registry';
 
 /**
  * 规范化路径，确保：
@@ -20,10 +21,10 @@ function normalizePath(inputPath: string): string {
 }
 
 /**
- * 注册控制器的路由
+ * 注册单个控制器的路由
  */
 // biome-ignore lint/suspicious/noExplicitAny: 运行时才能确定
-export function registerRoutes(app: Hono, controller: any) {
+function registerController(app: Hono, controller: any) {
     const routes = Reflect.getMetadata(ROUTE_METADATA, controller) || [];
     const instance = new controller();
     const prefix = getControllerMetadata(controller);
@@ -42,5 +43,16 @@ export function registerRoutes(app: Hono, controller: any) {
         }
     }
 
+    return app;
+}
+
+/**
+ * 注册所有已注册的控制器的路由
+ */
+export function registerRoutes(app: Hono): Hono {
+    const controllers = controllerRegistry.getControllers();
+    for (const controller of controllers) {
+        registerController(app, controller);
+    }
     return app;
 }

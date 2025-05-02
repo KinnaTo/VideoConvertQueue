@@ -1,5 +1,7 @@
 import 'reflect-metadata';
+import { controllerRegistry } from '../core/controller-registry';
 import { ROUTE_METADATA } from './http';
+import type { Constructor } from './types';
 
 /**
  * 控制器装饰器模块
@@ -20,12 +22,14 @@ export const CONTROLLER_METADATA = 'controller';
  * 控制器装饰器
  *
  * 用于将类标记为控制器，并定义其基础路径。
+ * 同时会自动将控制器注册到全局的controllerRegistry中。
  *
  * @param prefix 控制器的基础路径前缀
  */
 export function Controller(prefix = '') {
-    return (target: Function) => {
+    return (target: Constructor) => {
         Reflect.defineMetadata(CONTROLLER_METADATA, prefix, target);
+        controllerRegistry.registerController(target);
     };
 }
 
