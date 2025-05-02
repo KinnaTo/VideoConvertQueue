@@ -1,6 +1,8 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: reason
 import 'reflect-metadata';
 import { TYPE_METADATA } from './types';
+import { ROUTE_METADATA } from './http';
+import { getControllerMetadata } from './controller';
 
 const OPENAPI_TAGS_KEY = 'openapi:tags';
 const OPENAPI_OPERATION_KEY = 'openapi:operation';
@@ -264,6 +266,23 @@ export function ApiResponse(statusCode: number, options: ApiResponseOptions) {
 }
 
 /**
+ * 规范化路径，确保：
+ * 1. 以/开头
+ * 2. 不以/结尾（除非是根路径）
+ * 3. 不会有重复的/
+ */
+function normalizePath(inputPath: string): string {
+    // 确保以/开头
+    const withLeadingSlash = inputPath.startsWith('/') ? inputPath : `/${inputPath}`;
+
+    // 移除结尾的/（除非是根路径）
+    const withoutTrailingSlash = withLeadingSlash.length > 1 && withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+
+    // 替换多个连续的/为单个/
+    return withoutTrailingSlash.replace(/\/+/g, '/');
+}
+
+/**
  * 生成OpenAPI文档
  */
 export function generateOpenApiDocument(controllers: any[]): any {
@@ -274,7 +293,7 @@ export function generateOpenApiDocument(controllers: any[]): any {
     const models = new Set<any>();
     for (const controller of controllers) {
         // 收集控制器中使用的所有模型
-        const routes = Reflect.getMetadata('route', controller) || [];
+        const routes = Reflect.getMetadata(ROUTE_METADATA, controller) || [];
         for (const route of routes) {
             const operation = Reflect.getMetadata(OPENAPI_OPERATION_KEY, controller, route.handlerName) || {};
             if (operation.responses) {
@@ -306,7 +325,9 @@ export function generateOpenApiDocument(controllers: any[]): any {
     // 处理路由
     for (const controller of controllers) {
         const tags = Reflect.getMetadata(OPENAPI_TAGS_KEY, controller) || [];
-        const routes = Reflect.getMetadata('route', controller) || [];
+        const routes = Reflect.getMetadata(ROUTE_METADATA, controller) || [];
+        // 获取控制器基础路径
+        const prefix = getControllerMetadata(controller.prototype.constructor);
 
         for (const route of routes) {
             const operation = Reflect.getMetadata(OPENAPI_OPERATION_KEY, controller, route.handlerName) || {};
@@ -340,8 +361,9 @@ export function generateOpenApiDocument(controllers: any[]): any {
                 }
             }
 
-            // 构建路径对象
-            const normalizedPath = route.path.replace(/:[a-zA-Z][a-zA-Z0-9]*/g, (param: string) => `{${param.slice(1)}}`);
+            // 构建路径对象，合并控制器前缀和路由路径
+            const fullPath = normalizePath(`${prefix}${route.path}`);
+            const normalizedPath = fullPath.replace(/:[a-zA-Z][a-zA-Z0-9]*/g, (param: string) => `{${param.slice(1)}}`);
             paths[normalizedPath] = paths[normalizedPath] || {};
             paths[normalizedPath][route.method.toLowerCase()] = {
                 tags,
