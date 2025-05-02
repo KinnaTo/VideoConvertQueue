@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import * as yaml from 'js-yaml';
-import { UserController } from '../controllers/user';
+import { controllerRegistry } from '../core/controller-registry';
 import { generateOpenApiDocument } from '../decorators/openapi';
 
 const docs = new Hono();
 
-// 注册所有控制器
-const controllers = [UserController];
+// 使用controllerRegistry获取所有已注册的控制器
+const controllers = controllerRegistry.getControllers();
 
 // 生成 OpenAPI 文档
 const openApiDoc = generateOpenApiDocument(controllers);

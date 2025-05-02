@@ -19,16 +19,18 @@ app.use('*', accessLogger);
 app.use('*', performanceLogger());
 app.use('*', prettyJSON());
 
-// 注册路由
-app.route('/docs', docs);
-
+// 先加载所有controllers
 const controllerList = fs.readdirSync(path.join(__dirname, 'controllers'));
 for (const controller of controllerList) {
     await import(`./controllers/${controller}`);
     logger.info(`Controller ${controller} loaded`);
 }
 
+// 注册路由（包括controllers的路由）
 registerRoutes(app);
+
+// 注册文档路由（确保在所有controllers加载完成后）
+app.route('/docs', docs);
 
 // 启动服务器
 const port = process.env.PORT || 3000;
