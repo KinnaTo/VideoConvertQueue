@@ -5,8 +5,28 @@ import { Delete, Get, Patch, Post } from '@/decorators/http';
 import { withQueue } from '@/middlewares/queue';
 import { prisma } from '@/utils/db';
 
-@Controller('/queue/:queueId')
+@Controller('/queue')
 export class QueueController {
+    @Get('/')
+    async getQueues(c: Context) {
+        const queues = await prisma.queue.findMany();
+        return c.json({ queues });
+    }
+
+    @Post('/')
+    @Auth()
+    async createQueue(c: Context) {
+        const { name } = await c.req.json();
+        const queue = await prisma.queue.create({
+            data: {
+                name,
+            },
+        });
+        return c.json({ queue });
+    }
+}
+@Controller('/queue/:queueId')
+export class QueueTaskController {
     @Get('/', withQueue)
     @Auth()
     async getQueue(c: Context) {
@@ -58,23 +78,21 @@ export class QueueController {
         });
     }
 
-    @Patch('/task/:taskId/status', withQueue)
+    @Delete('/tasks', withQueue)
     @Auth()
-    async updateTaskStatus(c: Context) {
+    async deleteTasks(c: Context) {
         const queue = c.get('queue');
-        const { taskId } = c.req.param();
-        const { status } = await c.req.json();
-
-        const task = await prisma.task.update({
-            where: {
-                id: taskId,
-                queueId: queue.id,
-            },
-            data: {
-                status,
-            },
+        await prisma.task.deleteMany({
+            where: { queueId: queue.id },
         });
+    }
 
-        return c.json({ task });
+    @Delete('/', withQueue)
+    @Auth()
+    async deleteQueue(c: Context) {
+        const queue = c.get('queue');
+        await prisma.queue.delete({
+            where: { id: queue.id },
+        });
     }
 }

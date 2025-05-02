@@ -28,7 +28,7 @@ export const CONTROLLER_METADATA = 'controller';
  */
 export function Controller(prefix = '') {
     return (target: Constructor) => {
-        Reflect.defineMetadata(CONTROLLER_METADATA, prefix, target);
+        Reflect.defineMetadata(CONTROLLER_METADATA, `/api${prefix}`, target);
         controllerRegistry.registerController(target);
     };
 }

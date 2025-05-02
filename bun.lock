@@ -4,6 +4,7 @@
     "": {
       "name": "luckybe",
       "dependencies": {
+        "@hono/node-server": "^1.14.1",
         "@paralleldrive/cuid2": "^2.2.2",
         "@types/js-yaml": "^4.0.9",
         "dayjs": "^1.11.13",
@@ -94,6 +95,8 @@
     "@esbuild/win32-x64": ["@esbuild/win32-x64@0.25.3", "https://registry.npmmirror.com/@esbuild/win32-x64/-/win32-x64-0.25.3.tgz", { "os": "win32", "cpu": "x64" }, "sha512-ICgUR+kPimx0vvRzf+N/7L7tVSQeE3BYY+NhHRHXS1kBuPO7z2+7ea2HbhDyZdTephgvNvKrlDDKUexuCVBVvg=="],
 
     "@grammyjs/types": ["@grammyjs/types@3.20.0", "https://registry.npmmirror.com/@grammyjs/types/-/types-3.20.0.tgz", {}, "sha512-KIoikN5VTj6dcJpzMwXtouzaN3BZJ4jihBuEeXzWr25HtEfCF25V3dN11u+uNYi/9sBDvs0KCKZhyN/xFY0MBg=="],
+
+    "@hono/node-server": ["@hono/node-server@1.14.1", "https://registry.npmmirror.com/@hono/node-server/-/node-server-1.14.1.tgz", { "peerDependencies": { "hono": "^4" } }, "sha512-vmbuM+HPinjWzPe7FFPWMMQMsbKE9gDPhaH0FFdqbGpkT5lp++tcWDTxwBl5EgS5y6JVgIaCdjeHRfQ4XRBRjQ=="],
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "https://registry.npmmirror.com/@noble/hashes/-/hashes-1.8.0.tgz", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
 

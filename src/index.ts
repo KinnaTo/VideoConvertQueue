@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import fs from 'node:fs';
 import path from 'node:path';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { prettyJSON } from 'hono/pretty-json';
 import { accessLogger, performanceLogger } from './core/middleware';
@@ -18,6 +19,21 @@ const app = new Hono();
 app.use('*', accessLogger);
 app.use('*', performanceLogger());
 app.use('*', prettyJSON());
+
+// 托管前端静态文件
+app.use('/main.js', serveStatic({ root: './frontend' }));
+app.use('/favicon.ico', serveStatic({ root: './frontend' }));
+app.use('/mdui.min.css', serveStatic({ root: './frontend' }));
+app.use('/mdui.min.js', serveStatic({ root: './frontend' }));
+// 其他静态资源可按需添加
+
+// 非 /api 路径的 HTML 路由返回 index.html
+app.use((c, next) => {
+    if (!c.req.path.startsWith('/api') && !c.req.path.startsWith('/docs') && !c.req.path.match(/\.[a-zA-Z0-9]+$/)) {
+        return serveStatic({ path: './frontend/index.html' })(c, next);
+    }
+    return next();
+});
 
 // 先加载所有controllers
 const controllerList = fs.readdirSync(path.join(__dirname, 'controllers'));
