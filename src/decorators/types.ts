@@ -4,6 +4,11 @@ import 'reflect-metadata';
 export const TYPE_METADATA = 'type:metadata';
 export const VALIDATION_METADATA = 'validation:metadata';
 
+/**
+ * 构造函数类型
+ */
+export type Constructor = { new (...args: any[]): any };
+
 type TypeOptions = {
     required?: boolean;
     nullable?: boolean;

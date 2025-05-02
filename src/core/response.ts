@@ -1,8 +1,9 @@
 import { createId } from '@paralleldrive/cuid2';
 import dayjs from 'dayjs';
 import type { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { LogCategory, Logger } from '@/core/logger';
+import { HTTPException } from 'hono/http-exception';
+import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status';
+import logger from '../utils/logger';
 
 /**
  * 标准响应格式
@@ -20,15 +21,6 @@ export interface StandardResponse<T = unknown> {
  * 提供统一的响应格式化功能，确保所有API响应遵循一致的格式。
  */
 export class ResponseUtil {
-    private static logger: Logger;
-
-    /**
-     * 初始化响应工具类
-     */
-    public static initialize(): void {
-        ResponseUtil.logger = Logger.getInstance();
-    }
-
     /**
      * 创建成功响应
      * @param c Hono Context
@@ -36,13 +28,19 @@ export class ResponseUtil {
      * @param message 成功消息
      * @returns Response对象
      */
-    static success<T>(c: Context, data?: T, message = 'Success'): Response {
+    static success<T>(c: Context, data?: T, message?: string): Response {
         const response: StandardResponse<T> = {
             status: 'success',
-            message,
-            data,
             timestamp: dayjs().toISOString(),
         };
+
+        if (data !== undefined) {
+            response.data = data;
+        }
+
+        if (message) {
+            response.message = message;
+        }
 
         return c.json(response);
     }
@@ -67,7 +65,7 @@ export class ResponseUtil {
             const requestId = createId();
             response.requestId = requestId;
 
-            ResponseUtil.logError(requestId, message, c, error).catch((err) => {
+            ResponseUtil.logError(error, c).catch((err) => {
                 console.error('Failed to log error:', err);
             });
         }
@@ -75,34 +73,17 @@ export class ResponseUtil {
         return c.json(response, httpStatus as ContentfulStatusCode);
     }
 
-    /**
-     * 记录错误日志
-     * @param requestId 请求ID
-     * @param message 错误消息
-     * @param c Hono Context
-     * @param error 原始错误对象
-     */
-    private static async logError(requestId: string, message: string, c: Context, error?: Error): Promise<void> {
+    private static async logError(err: Error | HTTPException | unknown, c: Context): Promise<void> {
         try {
-            // 构建错误日志对象
-            const errorLog = {
-                requestId,
-                message,
-                stack: error?.stack,
-                path: c.req.path,
-                method: c.req.method,
-                userAgent: c.req.header('user-agent'),
-                ipAddress: c.req.header('x-forwarded-for') || c.req.header('x-real-ip'),
-                timestamp: dayjs().toISOString(),
-                headers: Object.fromEntries(c.req.raw.headers),
-                query: c.req.query(),
-                body: await c.req.json().catch(() => ({})),
-            };
-
-            // 记录到日志系统
-            ResponseUtil.logger.error(message, LogCategory.ERROR, errorLog);
-        } catch (logError) {
-            console.error('Error in logError:', logError);
+            if (err instanceof HTTPException) {
+                logger.warn(`HTTP Exception: ${err.message}`);
+            } else if (err instanceof Error) {
+                logger.error(`Error: ${err.message}\n${err.stack}`);
+            } else {
+                logger.error('Unknown error');
+            }
+        } catch (_error) {
+            logger.error('Error in logError');
         }
     }
 }
