@@ -52,15 +52,29 @@ model Task {
     queue    Queue      @relation(fields: [queueId], references: [id])
     queueId  String
 
+    result Json?
+    error  String?
+
+    machine   Machine? @relation(fields: [machineId], references: [id])
+    machineId String?
+
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
 
 model Machine {
-    id   String @id @default(cuid())
-    name String
-    ip   String
+    id           String @id @default(cuid())
+    name         String
+    ip           String
+    token        String @unique @default(uuid())
+    tasks        Task[]
+    successCount Int    @default(0)
+    failedCount  Int    @default(0)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    deviceInfo Json?
+
+    createdAt      DateTime  @default(now())
+    updatedAt      DateTime  @updatedAt
+    heartbeat      DateTime?
+    firstHeartbeat DateTime?
 }

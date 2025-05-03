@@ -22,9 +22,6 @@ app.use('*', prettyJSON());
 
 // 托管前端静态文件
 app.use('/main.js', serveStatic({ root: './frontend' }));
-app.use('/favicon.ico', serveStatic({ root: './frontend' }));
-app.use('/mdui.min.css', serveStatic({ root: './frontend' }));
-app.use('/mdui.min.js', serveStatic({ root: './frontend' }));
 // 其他静态资源可按需添加
 
 // 非 /api 路径的 HTML 路由返回 index.html

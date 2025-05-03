@@ -7,6 +7,7 @@ import { prisma } from '@/utils/db';
 @Controller('/machine')
 export class MachineController {
     @Get('/')
+    @Auth()
     async getMachine(c: Context) {
         const machines = await prisma.machine.findMany();
         return c.json({ machines });
