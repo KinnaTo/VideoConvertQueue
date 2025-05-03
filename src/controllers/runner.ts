@@ -28,6 +28,9 @@ export class RunnerController {
 
         const task = await prisma.task.findFirst({
             where: { queueId, status: TaskStatus.WAITING },
+            orderBy: {
+                priority: 'desc',
+            },
         });
 
         if (!task) {

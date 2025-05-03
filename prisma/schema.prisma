@@ -55,6 +55,8 @@ model Task {
     result Json?
     error  String?
 
+    source String?
+
     machine   Machine? @relation(fields: [machineId], references: [id])
     machineId String?
 

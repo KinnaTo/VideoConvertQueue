@@ -51,13 +51,14 @@ export class QueueTaskController {
     @Auth()
     async createTask(c: Context) {
         const queue = c.get('queue');
-        const { name, priority } = await c.req.json();
+        const { name, priority, source } = await c.req.json();
 
         const task = await prisma.task.create({
             data: {
                 name,
                 priority,
                 queueId: queue.id,
+                source,
             },
         });
 
