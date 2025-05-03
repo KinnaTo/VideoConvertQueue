@@ -74,6 +74,7 @@ model Machine {
     failedCount  Int    @default(0)
 
     deviceInfo Json?
+    encoder    String?
 
     createdAt      DateTime  @default(now())
     updatedAt      DateTime  @updatedAt

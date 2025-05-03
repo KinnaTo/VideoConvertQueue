@@ -1,18 +1,15 @@
 import pc from 'picocolors';
-import { v4 as uuidv4 } from 'uuid';
 import { prisma } from './db';
 
-const apiKeyCount = await prisma.apiKey.count();
+const apiKeyCount = await prisma.token.count();
 if (apiKeyCount === 0) {
-    const key = uuidv4();
-    const availablePriority = 100;
+    const maxPriority = 100;
 
-    await prisma.apiKey.create({
+    const token = await prisma.token.create({
         data: {
-            key,
-            availablePriority,
+            maxPriority,
         },
     });
 
-    console.log(pc.green('Created initial API key:'), pc.cyan(key));
+    console.log(pc.green('Created initial API key:'), pc.cyan(token.token));
 }

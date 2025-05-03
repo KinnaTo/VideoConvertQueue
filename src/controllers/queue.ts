@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 import { Auth } from '@/decorators/auth';
 import { Controller } from '@/decorators/controller';
-import { Delete, Get, Patch, Post } from '@/decorators/http';
+import { Delete, Get, Post } from '@/decorators/http';
 import { withQueue } from '@/middlewares/queue';
 import { prisma } from '@/utils/db';
 
