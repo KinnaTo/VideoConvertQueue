@@ -51,7 +51,7 @@ export class QueueTaskController {
     @Auth()
     async createTask(c: Context) {
         const queue = c.get('queue');
-        const { name, priority, source } = await c.req.json();
+        const { name, priority, source, convertParams } = await c.req.json();
 
         const task = await prisma.task.create({
             data: {
@@ -59,6 +59,7 @@ export class QueueTaskController {
                 priority,
                 queueId: queue.id,
                 source,
+                convertParams,
             },
         });
 
@@ -86,6 +87,8 @@ export class QueueTaskController {
         await prisma.task.deleteMany({
             where: { queueId: queue.id },
         });
+
+        return c.json({ success: true });
     }
 
     @Delete('/', withQueue)

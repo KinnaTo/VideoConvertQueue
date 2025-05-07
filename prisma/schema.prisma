@@ -16,7 +16,9 @@ datasource db {
 
 enum TaskStatus {
     WAITING
-    RUNNING
+    DOWNLOADING
+    CONVERTING
+    UPLOADING
     FINISHED
     FAILED
 }
@@ -51,6 +53,12 @@ model Task {
     priority Int        @default(0)
     queue    Queue      @relation(fields: [queueId], references: [id])
     queueId  String
+
+    convertParams Json?
+
+    downloadInfo Json?
+    convertInfo  Json?
+    uploadInfo   Json?
 
     result Json?
     error  String?

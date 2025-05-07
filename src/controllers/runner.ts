@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Context } from 'hono';
 import { AuthMachine } from '@/decorators/authmachine';
 import { Controller } from '@/decorators/controller';
@@ -14,6 +16,20 @@ export class RunnerController {
         return c.json({ runner: { id: runner.id, name: runner.name } });
     }
 
+    @Get('/minio')
+    @AuthMachine()
+    async getMinio(c: Context) {
+        const configRaw = fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf-8');
+        const config = JSON.parse(configRaw);
+
+        return c.json({
+            accessKey: config.minio.accessKey,
+            secretKey: config.minio.secretKey,
+            bucket: config.minio.bucket,
+            endpoint: config.minio.endpoint,
+        });
+    }
+
     @Get('/listQueue')
     @AuthMachine()
     async listQueue(c: Context) {
@@ -26,21 +42,15 @@ export class RunnerController {
         }
     }
 
-    @Get('/:queueId/getTask')
+    @Get('/getTask')
     @AuthMachine()
     async getTask(c: Context) {
-        const { queueId } = c.req.param();
-        const _runner = c.get('machine');
-
         try {
             const task = await prisma.task.findFirst({
                 where: {
-                    queueId,
                     status: TaskStatus.WAITING,
                 },
-                orderBy: {
-                    priority: 'desc',
-                },
+                orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
             });
 
             if (!task) {
@@ -49,7 +59,7 @@ export class RunnerController {
 
             return c.json({ task });
         } catch (error) {
-            console.error(`Failed to get task for queue ${queueId}:`, error);
+            console.error('Failed to get task:', error);
             return c.json({ error: '获取任务失败' }, 500);
         }
     }
@@ -58,7 +68,7 @@ export class RunnerController {
     @AuthMachine()
     async startTask(c: Context) {
         const { taskId } = c.req.param();
-        const _runner = c.get('machine');
+        const runner = c.get('machine');
 
         try {
             const task = await prisma.task.update({
@@ -66,7 +76,8 @@ export class RunnerController {
                     id: taskId,
                 },
                 data: {
-                    status: TaskStatus.RUNNING,
+                    status: TaskStatus.DOWNLOADING,
+                    machineId: runner.id,
                 },
             });
 
@@ -81,26 +92,127 @@ export class RunnerController {
         }
     }
 
+    @Post('/:taskId/download')
+    @AuthMachine()
+    async downloadTask(c: Context) {
+        const { taskId } = c.req.param();
+        const runner = c.get('machine');
+        try {
+            const { downloadInfo } = await c.req.json();
+            if (downloadInfo === undefined) {
+                return c.json({ error: '缺少下载信息' }, 400);
+            }
+
+            await prisma.task.update({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+                data: {
+                    downloadInfo,
+                    status: TaskStatus.DOWNLOADING,
+                },
+            });
+
+            return c.json({ success: true });
+        } catch (error) {
+            console.error(`Failed to download task ${taskId}:`, error);
+            return c.json({ error: '下载任务失败' }, 500);
+        }
+    }
+
+    @Post('/:taskId/convert')
+    @AuthMachine()
+    async convertTask(c: Context) {
+        const { taskId } = c.req.param();
+        const runner = c.get('machine');
+
+        try {
+            const { convertInfo } = await c.req.json();
+            if (convertInfo === undefined) {
+                return c.json({ error: '缺少转换信息' }, 400);
+            }
+
+            await prisma.task.update({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+                data: {
+                    convertInfo,
+                    status: TaskStatus.CONVERTING,
+                },
+            });
+
+            return c.json({ success: true });
+        } catch (error) {
+            console.error(`Failed to convert task ${taskId}:`, error);
+            return c.json({ error: '转换任务失败' }, 500);
+        }
+    }
+
+    @Post('/:taskId/upload')
+    @AuthMachine()
+    async uploadTask(c: Context) {
+        const { taskId } = c.req.param();
+        const runner = c.get('machine');
+
+        try {
+            const { uploadInfo } = await c.req.json();
+            if (uploadInfo === undefined) {
+                return c.json({ error: '缺少上传信息' }, 400);
+            }
+
+            await prisma.task.update({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+                data: {
+                    uploadInfo,
+                    status: TaskStatus.UPLOADING,
+                },
+            });
+
+            return c.json({ success: true });
+        } catch (error) {
+            console.error(`Failed to upload task ${taskId}:`, error);
+            return c.json({ error: '上传任务失败' }, 500);
+        }
+    }
+
     @Post('/:taskId/complete')
     @AuthMachine()
     async completeTask(c: Context) {
         const { taskId } = c.req.param();
-        const _runner = c.get('machine');
+        const runner = c.get('machine');
         try {
             const { result } = await c.req.json();
             if (result === undefined) {
                 return c.json({ error: '缺少结果数据' }, 400);
             }
 
-            await prisma.task.update({
-                where: {
-                    id: taskId,
-                },
-                data: {
-                    status: TaskStatus.FINISHED,
-                    result,
-                },
-            });
+            await prisma.$transaction([
+                prisma.task.update({
+                    where: {
+                        id: taskId,
+                    },
+                    data: {
+                        status: TaskStatus.FINISHED,
+                        result,
+                    },
+                }),
+                prisma.machine.update({
+                    where: {
+                        id: runner.id,
+                    },
+                    data: {
+                        successCount: {
+                            increment: 1,
+                        },
+                    },
+                }),
+            ]);
 
             return c.json({ success: true });
         } catch (error) {
@@ -113,52 +225,39 @@ export class RunnerController {
     @AuthMachine()
     async failTask(c: Context) {
         const { taskId } = c.req.param();
-        const _runner = c.get('machine');
+        const runner = c.get('machine');
         try {
             const { error: taskError } = await c.req.json();
             if (taskError === undefined) {
                 return c.json({ error: '缺少错误信息' }, 400);
             }
 
-            await prisma.task.update({
-                where: {
-                    id: taskId,
-                },
-                data: {
-                    status: TaskStatus.FAILED,
-                    error: taskError,
-                },
-            });
+            await prisma.$transaction([
+                prisma.task.update({
+                    where: {
+                        id: taskId,
+                    },
+                    data: {
+                        status: TaskStatus.FAILED,
+                        error: taskError,
+                    },
+                }),
+                prisma.machine.update({
+                    where: {
+                        id: runner.id,
+                    },
+                    data: {
+                        failedCount: {
+                            increment: 1,
+                        },
+                    },
+                }),
+            ]);
 
             return c.json({ success: true });
         } catch (error) {
             console.error(`Failed to fail task ${taskId}:`, error);
             return c.json({ error: '标记任务失败时出错' }, 500);
-        }
-    }
-
-    @Post('/:taskId/progress')
-    @AuthMachine()
-    async progressTask(c: Context) {
-        const { taskId } = c.req.param();
-        const _runner = c.get('machine');
-        try {
-            const { data } = await c.req.json();
-            if (data === undefined) {
-                return c.json({ error: '缺少进度数据' }, 400);
-            }
-
-            await prisma.task.update({
-                where: {
-                    id: taskId,
-                },
-                data: { result: data },
-            });
-
-            return c.json({ success: true });
-        } catch (error) {
-            console.error(`Failed to update progress for task ${taskId}:`, error);
-            return c.json({ error: '更新任务进度失败' }, 500);
         }
     }
 
@@ -191,7 +290,7 @@ export class RunnerController {
         try {
             const data = await c.req.json();
 
-            if (!data || typeof data.deviceInfo !== 'object' || typeof data.encoder !== 'object') {
+            if (!data || typeof data.deviceInfo !== 'object' || typeof data.encoder !== 'string') {
                 return c.json({ error: '缺少 deviceInfo 或 encoder 数据' }, 400);
             }
 

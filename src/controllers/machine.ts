@@ -23,11 +23,7 @@ export class MachineController {
                 const isOnline = !!heartbeatDate && heartbeatDate > twoMinutesAgo;
 
                 return {
-                    id: machine.id,
-                    name: machine.name,
-                    ip: machine.ip,
-                    heartbeat: machine.heartbeat,
-                    firstHeartbeat: machine.firstHeartbeat,
+                    ...machine,
                     isOnline,
                 };
             });
