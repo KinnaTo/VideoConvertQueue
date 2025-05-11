@@ -19,15 +19,37 @@ export class RunnerController {
     @Get('/minio')
     @AuthMachine()
     async getMinio(c: Context) {
-        const configRaw = fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf-8');
-        const config = JSON.parse(configRaw);
+        try {
+            const configRaw = fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf-8');
+            const config = JSON.parse(configRaw);
 
-        return c.json({
-            accessKey: config.minio.accessKey,
-            secretKey: config.minio.secretKey,
-            bucket: config.minio.bucket,
-            endpoint: config.minio.endpoint,
-        });
+            if (!config.minio || !config.minio.accessKey || !config.minio.secretKey || !config.minio.bucket || !config.minio.endpoint) {
+                console.error('Invalid MinIO configuration in config.json');
+                return c.json({ error: 'Invalid MinIO configuration' }, 500);
+            }
+
+            const endpoint = config.minio.endpoint;
+            if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+                console.error('MinIO endpoint must start with http:// or https://');
+                return c.json({ error: 'Invalid MinIO endpoint format' }, 500);
+            }
+
+            console.log(`Returning MinIO config with endpoint: ${config.minio.endpoint}`);
+
+            return c.json({
+                accessKey: config.minio.accessKey,
+                secretKey: config.minio.secretKey,
+                bucket: config.minio.bucket,
+                endpoint: config.minio.endpoint,
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to get MinIO configuration:', errorMessage);
+            if (error instanceof Error && error.stack) {
+                console.error('Error stack:', error.stack);
+            }
+            return c.json({ error: `Failed to get MinIO configuration: ${errorMessage}` }, 500);
+        }
     }
 
     @Get('/listQueue')
@@ -97,10 +119,23 @@ export class RunnerController {
     async downloadTask(c: Context) {
         const { taskId } = c.req.param();
         const runner = c.get('machine');
+
         try {
             const { downloadInfo } = await c.req.json();
             if (downloadInfo === undefined) {
                 return c.json({ error: '缺少下载信息' }, 400);
+            }
+
+            // 先检查任务是否存在
+            const task = await prisma.task.findFirst({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+            });
+
+            if (!task) {
+                return c.json({ error: '任务不存在或不属于当前机器' }, 404);
             }
 
             await prisma.task.update({
@@ -116,8 +151,8 @@ export class RunnerController {
 
             return c.json({ success: true });
         } catch (error) {
-            console.error(`Failed to download task ${taskId}:`, error);
-            return c.json({ error: '下载任务失败' }, 500);
+            console.error(`Failed to update download progress for task ${taskId}:`, error);
+            return c.json({ error: '更新下载进度失败' }, 500);
         }
     }
 
@@ -133,10 +168,27 @@ export class RunnerController {
                 return c.json({ error: '缺少转换信息' }, 400);
             }
 
+            // 先检查任务是否存在
+            const task = await prisma.task.findFirst({
+                where: {
+                    id: taskId,
+                },
+            });
+
+            if (!task) {
+                console.error(`Task ${taskId} not found in database`);
+                return c.json({ error: '任务不存在', code: 'TASK_NOT_FOUND' }, 404);
+            }
+
+            // 检查任务是否属于当前机器
+            if (task.machineId !== runner.id) {
+                console.error(`Task ${taskId} belongs to machine ${task.machineId}, not ${runner.id}`);
+                return c.json({ error: '任务不属于当前机器', code: 'WRONG_MACHINE' }, 403);
+            }
+
             await prisma.task.update({
                 where: {
                     id: taskId,
-                    machineId: runner.id,
                 },
                 data: {
                     convertInfo,
@@ -147,6 +199,12 @@ export class RunnerController {
             return c.json({ success: true });
         } catch (error) {
             console.error(`Failed to convert task ${taskId}:`, error);
+
+            // 记录详细的错误堆栈
+            if (error instanceof Error && error.stack) {
+                console.error(`Error stack:`, error.stack);
+            }
+
             return c.json({ error: '转换任务失败' }, 500);
         }
     }
@@ -163,10 +221,30 @@ export class RunnerController {
                 return c.json({ error: '缺少上传信息' }, 400);
             }
 
+            // 先检查任务是否存在
+            const task = await prisma.task.findFirst({
+                where: {
+                    id: taskId,
+                },
+            });
+
+            if (!task) {
+                console.error(`Task ${taskId} not found in database`);
+                return c.json({ error: '任务不存在', code: 'TASK_NOT_FOUND' }, 404);
+            }
+
+            // 检查任务是否属于当前机器
+            if (task.machineId !== runner.id) {
+                console.error(`Task ${taskId} belongs to machine ${task.machineId}, not ${runner.id}`);
+                return c.json({ error: '任务不属于当前机器', code: 'WRONG_MACHINE' }, 403);
+            }
+
+            // 记录详细的请求信息（可选，仅用于调试大量进度更新时可注释掉）
+            // console.log(`Upload progress update for task ${taskId}: ${JSON.stringify(uploadInfo)}`);
+
             await prisma.task.update({
                 where: {
                     id: taskId,
-                    machineId: runner.id,
                 },
                 data: {
                     uploadInfo,
@@ -175,9 +253,24 @@ export class RunnerController {
             });
 
             return c.json({ success: true });
-        } catch (error) {
+        } catch (error: any) {
+            // 增强错误日志
             console.error(`Failed to upload task ${taskId}:`, error);
-            return c.json({ error: '上传任务失败' }, 500);
+
+            // 记录详细的错误堆栈
+            if (error instanceof Error && error.stack) {
+                console.error(`Error stack:`, error.stack);
+            }
+
+            // 如果是数据库错误，记录更多信息
+            if (error.code && error.meta) {
+                console.error(`Database error code: ${error.code}, meta: ${JSON.stringify(error.meta)}`);
+            }
+
+            return c.json({
+                error: '上传任务失败',
+                details: error instanceof Error ? error.message : String(error)
+            }, 500);
         }
     }
 
@@ -307,6 +400,41 @@ export class RunnerController {
         } catch (error) {
             console.error(`Heartbeat failed for runner ${runner.id}:`, error);
             return c.json({ error: '心跳处理失败' }, 500);
+        }
+    }
+
+    @Post('/:taskId/downloadComplete')
+    @AuthMachine()
+    async downloadComplete(c: Context) {
+        const { taskId } = c.req.param();
+        const runner = c.get('machine');
+
+        try {
+            const task = await prisma.task.findFirst({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+            });
+
+            if (!task) {
+                return c.json({ error: '任务不存在或不属于当前机器' }, 404);
+            }
+
+            await prisma.task.update({
+                where: {
+                    id: taskId,
+                    machineId: runner.id,
+                },
+                data: {
+                    status: TaskStatus.CONVERTING,
+                },
+            });
+
+            return c.json({ success: true });
+        } catch (error) {
+            console.error(`Failed to complete download for task ${taskId}:`, error);
+            return c.json({ error: '更新任务状态失败' }, 500);
         }
     }
 }

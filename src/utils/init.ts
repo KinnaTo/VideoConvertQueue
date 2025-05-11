@@ -1,5 +1,9 @@
 import pc from 'picocolors';
 import { prisma } from './db';
+import { testMinioConnection } from './minio-tester';
+
+// 测试MinIO连接
+await testMinioConnection();
 
 const apiKeyCount = await prisma.token.count();
 if (apiKeyCount === 0) {
