@@ -4,6 +4,7 @@ node_modules
 .cursor
 .cursorrules
 *.db*
+config.json
 
 # output
 out
