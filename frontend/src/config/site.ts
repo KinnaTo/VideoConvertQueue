@@ -1,69 +1,57 @@
 export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
-  name: "Vite + HeroUI",
-  description: "Make beautiful websites regardless of your design experience.",
+  name: "视频转换队列系统",
+  description: "高效管理视频转换任务队列的系统",
   navItems: [
     {
-      label: "Home",
+      label: "仪表盘",
       href: "/",
     },
     {
-      label: "Docs",
-      href: "/docs",
+      label: "任务",
+      href: "/tasks",
     },
     {
-      label: "Pricing",
-      href: "/pricing",
+      label: "机器",
+      href: "/machines",
     },
     {
-      label: "Blog",
-      href: "/blog",
-    },
-    {
-      label: "About",
-      href: "/about",
-    },
+      label: "设置",
+      href: "/settings",
+    }
   ],
   navMenuItems: [
     {
-      label: "Profile",
-      href: "/profile",
+      label: "仪表盘",
+      href: "/",
     },
     {
-      label: "Dashboard",
-      href: "/dashboard",
+      label: "任务",
+      href: "/tasks",
     },
     {
-      label: "Projects",
-      href: "/projects",
+      label: "机器",
+      href: "/machines",
     },
     {
-      label: "Team",
-      href: "/team",
-    },
-    {
-      label: "Calendar",
-      href: "/calendar",
-    },
-    {
-      label: "Settings",
+      label: "设置",
       href: "/settings",
     },
     {
-      label: "Help & Feedback",
-      href: "/help-feedback",
+      label: "帮助 & 反馈",
+      href: "/help",
     },
     {
-      label: "Logout",
+      label: "退出",
       href: "/logout",
-    },
+    }
   ],
   links: {
-    github: "https://github.com/frontio-ai/heroui",
-    twitter: "https://twitter.com/hero_ui",
-    docs: "https://heroui.com",
-    discord: "https://discord.gg/9b6yyZKmH4",
-    sponsor: "https://patreon.com/jrgarciadev",
-  },
+    github: "https://github.com/heroui/heroui",
+    twitter: "https://twitter.com/heroui",
+    docs: "https://heroui.dev",
+    discord: "https://discord.gg/heroui",
+    sponsor: "https://heroui.dev/sponsor"
+  }
 };
